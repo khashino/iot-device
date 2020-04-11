@@ -1,0 +1,137 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+"""
+PyFingerprint
+Copyright (C) 2015 Bastian Raschke <bastian.raschke@posteo.de>
+All rights reserved.
+
+"""
+
+import hashlib
+from datetime import datetime
+import time
+from pyfingerprint.pyfingerprint import PyFingerprint
+import indicators
+import ConfigParser
+import io
+import sync
+
+with open("/project/config.ini") as f:
+    sample_config = f.read()
+config = ConfigParser.RawConfigParser(allow_no_value=True)
+config.readfp(io.BytesIO(sample_config))
+
+clockfile = config.get('other', 'clockfile')
+sleeptimer = float(config.get('finger', 'sleeptimer'))
+fingerwait = float(config.get('finger', 'fingerwait'))
+
+
+usersfile = config.get('finger', 'usersfile')
+
+def lines_that_start_with(string, fp):
+    return [line for line in fp if line.startswith(string)]
+## Search for a finger
+##
+#time.sleep(30)
+## Tries to initialize the sensor
+while True:
+    print('start waiting')
+    time.sleep(sleeptimer)
+    print('wait complete')
+    try:
+        f = PyFingerprint('/dev/serial0', 57600, 0xFFFFFFFF, 0x00000000)
+
+        if ( f.verifyPassword() == False ):
+            raise ValueError('The given fingerprint sensor password is wrong!')
+
+        print("pass")
+        break
+    except Exception as e:
+        print('The fingerprint sensor could not be initialized!')
+        print('Exception message: ' + str(e))
+        pass
+        #exit(1)
+
+## Gets some sensor information
+print('Currently used templates: ' + str(f.getTemplateCount()) +'/'+ str(f.getStorageCapacity()))
+
+indicators.buzzersetup()
+indicators.ledsetup()
+#for x in range(1, 2):
+#    indicators.blink(indicators.led2, 1)
+#    indicators.blink(indicators.led3, 1)
+#    indicators.blink(indicators.led1, 1)
+#indicators.beep(0.03)
+
+## Tries to search the finger and calculate hash
+while True:
+    try:
+        print('Waiting for finger...')
+
+        ## Wait that finger is read
+        while ( f.readImage() == False ):
+            pass
+
+        ## Converts read image to characteristics and stores it in charbuffer 1
+        f.convertImage(0x01)
+
+        ## Searchs template
+        result = f.searchTemplate()
+
+        positionNumber = result[0]
+        accuracyScore = result[1]
+
+        if ( positionNumber == -1 ):
+            print('No match found!')
+            #indicators.blinkall(1)
+            indicators.beep(1)
+            #exit(0)
+        else:
+            print('Found template at position #' + str(positionNumber))
+            print('The accuracy score is: ' + str(accuracyScore))
+            indicators.beep(0.03)
+            indicators.blinkall(0.1)
+
+        ##  get user data   ##
+            user = ""
+            with open(usersfile, "r") as fp:
+                for line in lines_that_start_with(str(positionNumber), fp):
+                    #print line
+                    user = line.split(",")
+
+            fname = user[1]
+            lname = user[2]
+            now = datetime.now()
+            clocktime = now.strftime('%Y/%m/%d-%H:%M:%S')
+            ## put data in file ##
+            try:
+                fl = open(clockfile, "a")
+    	        clock_data = str(positionNumber) + "," + fname + "," + lname + "," + clocktime + ",0\n"
+    	        print(clock_data)
+    	        fl.write(clock_data)
+    	        fl.close()
+                indicators.beep(0.03)
+            except Exception as e:
+                raise
+            print("sync")
+            sync.resync()
+            print("sync Done")
+        ## wait for next finger
+        time.sleep(fingerwait)
+        ## OPTIONAL stuff
+        ##
+
+        ## Loads the found template to charbuffer 1
+        #f.loadTemplate(positionNumber, 0x01)
+
+        ## Downloads the characteristics of template loaded in charbuffer 1
+        #characterics = str(f.downloadCharacteristics(0x01)).encode('utf-8')
+
+        ## Hashes characteristics of template
+        #print('SHA-2 hash of template: ' + hashlib.sha256(characterics).hexdigest())
+
+    except Exception as e:
+        print('Operation failed!')
+        print('Exception message: ' + str(e))
+        #exit(1)
