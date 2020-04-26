@@ -30,8 +30,8 @@ def resync():
             fname = clockdata[1]
             lname = clockdata[2]
             datetime = clockdata[3]
-            soapreq(fid,fname,lname,datetime)
             try:
+                soapreq(fid,fname,lname,datetime)
                 fl = open(syncfile, "a")
                 clock_data = fid + "," + fname + "," + lname + "," + datetime + ",1\n"
                 #print(clock_data)
@@ -39,4 +39,5 @@ def resync():
                 fl.close()
             except Exception as e:
                 raise
+                return
     os.remove(clockfile)

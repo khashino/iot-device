@@ -15,9 +15,12 @@ while True:
         thread1 = threading.Thread(target=status.checker()).start()
     if counter % 2 == 0:
         #time.sleep(1)
-        f=finger.fingerinit()
-        if f.readImage() == True:
-            finger.fingerop(f)
+        try:
+            f=finger.fingerinit()
+            if f.readImage() == True:
+                finger.fingerop(f)
+        except Exception as e:
+            pass 
     thread2 = threading.Thread(target=ui.clockmain()).start()
     time.sleep(0.5)
     counter += 1
