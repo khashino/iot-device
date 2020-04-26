@@ -38,6 +38,5 @@ def resync():
                 fl.write(clock_data)
                 fl.close()
             except Exception as e:
-                raise
                 return
     os.remove(clockfile)
