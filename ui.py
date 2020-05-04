@@ -56,12 +56,15 @@ def get_image(path):
 
 ##########################################
 def initialize():
-    pygame.init()
-    screen = pygame.display.set_mode((160, 128), 0, 32)
-    pygame.display.set_caption('Clock')
-    pygame.mouse.set_cursor((8,8),(0,0),(0,0,0,0,0,0,0,0),(0,0,0,0,0,0,0,0))
-    return screen
-
+    try:
+        pygame.init()
+        screen = pygame.display.set_mode((160, 128), 0, 32)
+        pygame.display.set_caption('Clock')
+        pygame.mouse.set_cursor((8,8),(0,0),(0,0,0,0,0,0,0,0),(0,0,0,0,0,0,0,0))
+        return screen
+    except Alarm:
+        raise KeyboardInterrupt
+    
 def alarm(msg,bgc,clr):
     #while not done:
     screen = initialize()
